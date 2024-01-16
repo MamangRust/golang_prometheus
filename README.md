@@ -1,3 +1,10 @@
+## Golang Prometheus
+
+In this tutorial, we will cover the integration of a Golang application with Prometheus and Grafana for monitoring and visualization. The example Golang application will expose metrics that Prometheus will scrape, and Grafana will be used to create dashboards.
+
+## Golang Application Metrics
+
+```go
 package main
 
 import (
@@ -85,3 +92,81 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
+
+```
+
+## Docker-compose configuration
+
+```yaml
+version: '3'
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.49.1
+    container_name: prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    ports:
+      - '3000:3000'
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+
+  golang-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: golang-app
+    ports:
+      - '8080:8080'
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+
+networks:
+  monitoring:
+
+volumes:
+  grafana-storage:
+```
+
+## Prometheus Configuration
+
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'golang-app'
+    static_configs:
+      - targets: ['golang-app:8080']
+```
+
+## Grafana Dashboard Setup
+
+Access Grafana at http://localhost:3000 with the username admin and password admin.
+Add Prometheus as a data source using http://prometheus:9090.
+Import a pre-configured Golang metrics dashboard from the Grafana dashboard marketplace or create a custom dashboard.
+
+![Alt text](/images/grafana.png)
+
+## Demo
+
+![Demo](/images/image.png)
